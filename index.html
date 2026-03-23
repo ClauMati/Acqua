@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bevi, Dai! 💧 (versione sarcastica)</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(to bottom, #e1f5fe, #81d4fa);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { color: #0277bd; margin: 10px 0; }
+    .glass {
+      position: relative;
+      width: 180px;
+      height: 320px;
+      background: white;
+      border: 10px solid #0288d1;
+      border-radius: 30px 30px 70px 70px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      margin: 20px 0;
+    }
+    .water {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(to top, #42a5f5, #bbdefb);
+      transition: height 1.2s ease;
+    }
+    .wave {
+      position: absolute;
+      top: -20px;
+      width: 200%;
+      height: 40px;
+      background: rgba(255,255,255,0.35);
+      border-radius: 45%;
+      animation: wave 7s linear infinite;
+    }
+    @keyframes wave { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
+    .progress { font-size: 1.8rem; font-weight: bold; color: #01579b; margin: 10px 0; }
+    .reminder {
+      font-size: 1.4rem;
+      font-weight: 600;
+      text-align: center;
+      min-height: 80px;
+      padding: 0 20px;
+      color: #c62828;
+      opacity: 0;
+      transition: opacity 0.8s, transform 0.4s;
+    }
+    .reminder.show { opacity: 1; transform: scale(1.03); }
+    button {
+      background: #0288d1;
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      padding: 14px 32px;
+      border-radius: 50px;
+      margin: 8px;
+      box-shadow: 0 4px 12px rgba(2,136,209,0.3);
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.96); }
+    .history {
+      width: 90%;
+      max-width: 360px;
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-height: 180px;
+      overflow-y: auto;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Bevi, Dai! 💧</h1>
+
+<div class="glass">
+  <div class="water" id="water"></div>
+  <div class="wave"></div>
+</div>
+
+<div class="progress" id="progress">0 / 2000 ml</div>
+
+<button id="btn250">+250 ml</button>
+<button id="btn500">+500 ml</button>
+
+<div class="reminder" id="reminder"></div>
+
+<div class="history">
+  <strong>Storico oggi:</strong><br>
+  <div id="historyList"></div>
+</div>
+
+<button id="btnNotify" style="margin-top:20px; background:#555;">Attiva notifiche</button>
+
+<script>
+const GOAL = 2000;
+const PAUSE_AFTER_DRINK = 60 * 60 * 1000;     // 60 min in ms
+const REMINDER_INTERVAL = 45 * 60 * 1000;     // 45 min in ms
+
+let today = new Date().toISOString().split('T')[0];
+let data = JSON.parse(localStorage.getItem('beviIronico') || '{}');
+
+if (!data[today]) {
+  data[today] = { total: 0, lastDrink: Date.now() - PAUSE_AFTER_DRINK - 1, history: [] };
+}
+
+let state = data[today];
+
+const water = document.getElementById('water');
+const progress = document.getElementById('progress');
+const reminder = document.getElementById('reminder');
+const histList = document.getElementById('historyList');
+
+const messages = [
+  "Oh, guarda… sono passati 60 minuti e ancora non mi calcoli. Mi sento usato e abusato 💧",
+  "Tranquillo, continua pure a ignorarmi. Tanto sto diventando un vaso da cimitero da solo…",
+  "Complimenti, hai quasi trasformato 'sto bicchiere in un cactus. Applausi? No? Un sorso magari?",
+  "Ok, record mondiale di disidratazione in corso. Vuoi il trofeo o preferisci l'acqua?",
+  "Seriamente… o bevi o chiamo tua madre. Non sto scherzando (forse)."
+];
+
+function save() {
+  data[today] = state;
+  localStorage.setItem('beviIronico', JSON.stringify(data));
+}
+
+function updateUI() {
+  const perc = Math.min(state.total / GOAL, 1);
+  water.style.height = (perc * 280) + 'px';
+  progress.textContent = Math.round(state.total) + ' / ' + GOAL + ' ml';
+
+  histList.innerHTML = state.history.slice(0,7).map(h =>
+    `${new Date(h.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} • +${h.ml} ml<br>`
+  ).join('');
+}
+
+function showReminder() {
+  const minSinceLast = (Date.now() - state.lastDrink) / 60000;
+  const ignoredCount = Math.floor((minSinceLast - 60) / 45);
+
+  if (ignoredCount >= 0) {
+    const idx = Math.min(ignoredCount, messages.length - 1);
+    reminder.textContent = messages[idx];
+    reminder.classList.add('show');
+
+    if (Notification.permission === 'granted') {
+      new Notification("Il tuo bicchiere sta facendo il drammatico", {
+        body: messages[idx],
+        icon: "https://img.icons8.com/fluency/96/000000/water.png"
+      });
+    }
+  } else {
+    reminder.classList.remove('show');
+  }
+}
+
+function drink(amount) {
+  state.total = Math.min(GOAL, state.total + amount);
+  state.lastDrink = Date.now();
+  state.history.unshift({ t: Date.now(), ml: amount });
+  if (state.history.length > 12) state.history.pop();
+
+  reminder.classList.remove('show');
+  save();
+  updateUI();
+}
+
+// Pulsanti
+document.getElementById('btn250').onclick = () => drink(250);
+document.getElementById('btn500').onclick = () => drink(500);
+
+// Notifiche
+document.getElementById('btnNotify').onclick = async () => {
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+  alert(Notification.permission === 'granted' ? "Notifiche attivate ✓" : "Permesso negato 😕");
+};
+
+// Controlli periodici
+setInterval(() => {
+  // cambio giorno?
+  const nowDay = new Date().toISOString().split('T')[0];
+  if (nowDay !== today) {
+    today = nowDay;
+    if (!data[today]) data[today] = { total: 0, lastDrink: Date.now() - PAUSE_AFTER_DRINK - 1, history: [] };
+    state = data[today];
+  }
+
+  showReminder();
+}, 30000); // controlla ogni 30 secondi
+
+// avvio
+updateUI();
+showReminder();
+</script>
+</body>
+</html>
