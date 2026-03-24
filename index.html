@@ -3,213 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IdroLife - Il mio Assistente</title>
+    <title>IdroLife - Il Tormentatore</title>
     <style>
-        :root {
-            --blue: #00a8ff;
-            --green: #4cd137;
-            --red: #e84118;
-            --dark: #2f3640;
-            --light: #f5f6fa;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--light);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            transition: 0.5s;
-        }
-
-        .card {
-            background: white;
-            width: 90%;
-            max-width: 360px;
-            padding: 30px;
-            border-radius: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        /* Navigazione Pagine */
-        .page { display: none; }
-        .active { display: block; }
-
+        :root { --blue: #00a8ff; --green: #4cd137; --red: #e84118; --dark: #2f3640; --light: #f5f6fa; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--light); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .card { background: white; width: 90%; max-width: 360px; padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; position: relative; }
+        .page { display: none; } .active { display: block; }
+        
         /* Bottiglia */
-        .bottle-wrapper {
-            width: 110px;
-            height: 220px;
-            border: 5px solid var(--dark);
-            border-radius: 15px 15px 30px 30px;
-            margin: 20px auto;
-            position: relative;
-            background: #fff;
-            overflow: hidden;
-        }
+        .bottle-wrapper { width: 100px; height: 200px; border: 4px solid var(--dark); border-radius: 10px 10px 25px 25px; margin: 20px auto; position: relative; background: #fff; overflow: hidden; }
+        .water-level { position: absolute; bottom: 0; width: 100%; height: 0%; background: linear-gradient(to top, #0077be, var(--blue)); transition: height 0.5s ease-in-out; }
+        .target-line { position: absolute; width: 100%; border-top: 2px dashed var(--red); z-index: 2; transition: bottom 0.5s; }
 
-        .water-level {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 0%;
-            background: linear-gradient(to top, #0077be, var(--blue));
-            transition: height 1s ease-in-out;
-        }
-
-        /* Testi */
-        .timer-text { font-size: 2.8rem; font-weight: bold; color: var(--red); margin: 10px 0; }
-        .info-text { font-size: 1.2rem; margin-bottom: 20px; }
-
-        /* Input e Bottoni */
-        input {
-            width: 80%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 1rem;
-            text-align: center;
-        }
-
-        button {
-            width: 100%;
-            padding: 16px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 15px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn-start { background: var(--green); color: white; }
-        .btn-drink { background: var(--blue); color: white; }
-        .btn-pause { background: var(--dark); color: white; }
-        .btn-back { background: none; color: #7f8c8d; text-decoration: underline; font-size: 0.9rem; }
-
-        /* Dark Mode */
-        body.night-mode { background-color: #1a1a2e; }
-        body.night-mode .card { background-color: #16213e; color: white; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 1rem; }
+        button { width: 100%; padding: 16px; margin: 8px 0; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-drink { background: var(--blue); color: white; font-size: 1.1rem; }
+        .btn-setup { background: var(--green); color: white; }
+        .btn-back { background: none; color: #7f8c8d; text-decoration: underline; font-size: 0.9rem; margin-bottom: 10px; }
+        .status-msg { font-weight: bold; margin: 10px 0; min-height: 1.2em; }
     </style>
 </head>
 <body>
 
     <div id="setup-page" class="card page active">
-        <h1>Configurazione</h1>
-        <label>Obiettivo totale (ml):</label>
-        <input type="number" id="input-goal" value="2000">
-        <label>Capacità bicchiere (ml):</label>
-        <input type="number" id="input-glass" value="250">
-        <button class="btn-start" onclick="avviaApp()">INIZIA MONITORAGGIO</button>
+        <h1>Configurazione ⚙️</h1>
+        <label>Obiettivo Giornaliero (ml):</label><br>
+        <input type="number" id="input-goal" value="2000"><br>
+        <label>Ora Sveglia:</label><br>
+        <input type="time" id="input-wake" value="08:00"><br>
+        <label>Ora Sonno:</label><br>
+        <input type="time" id="input-sleep" value="23:00"><br>
+        <button class="btn-setup" onclick="salvaEAvvia()">SALVA E INIZIA</button>
+        <p style="font-size: 0.7rem; color: #999;">Assicurati di aver attivato le notifiche nel browser.</p>
     </div>
 
     <div id="main-page" class="card page">
-        <button class="btn-back" onclick="tornaAlSetup()">⬅ Cambia Impostazioni</button>
+        <button class="btn-back" onclick="mostraSetup()">⬅ Cambia Impostazioni</button>
         
+        <div id="status-msg" class="status-msg">Calcolo...</div>
+
         <div class="bottle-wrapper">
             <div id="fill" class="water-level"></div>
+            <div id="target-mark" class="target-line"></div>
         </div>
 
-        <div class="info-text">
-            <b id="status-drunk">0</b> / <span id="status-goal">2000</span> ml
+        <div style="font-size: 1.8rem; font-weight: bold; margin: 10px 0;">
+            <span id="label-drunk">0</span> / <span id="label-goal">2000</span> <small>ml</small>
         </div>
 
-        <div class="timer-text" id="display-timer">60:00</div>
-        
-        <button class="btn-drink" onclick="bevi()">BEVI UN BICCHIERE</button>
-        <button id="btn-pause" class="btn-pause" onclick="togglePausa()">MODALITÀ NOTTE</button>
+        <button class="btn-drink" onclick="bevi()">BEVI UN BICCHIERE (250ml)</button>
+        <p id="info-ritardo" style="color: var(--red); font-size: 0.9rem; font-weight: bold;"></p>
     </div>
 
-    <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
-
 <script>
-    let dati = {
+    let appData = {
         goal: 2000,
-        glass: 250,
+        wake: "08:00",
+        sleep: "23:00",
         drunk: 0,
-        secondsLeft: 3600,
-        isPaused: false
+        lastDate: ""
     };
 
-    let timerInterval;
+    // Al caricamento, controlla se ci sono dati vecchi
+    window.onload = function() {
+        const saved = localStorage.getItem('idrolife_data');
+        if (saved) {
+            appData = JSON.parse(saved);
+            
+            // RESET GIORNALIERO: Se è un giorno nuovo, azzera i ml bevuti
+            const oggi = new Date().toDateString();
+            if (appData.lastDate !== oggi) {
+                appData.drunk = 0;
+                appData.lastDate = oggi;
+                salvaDati();
+            }
+            mostraMain();
+        }
+    };
 
-    // Funzione per avviare l'app
-    function avviaApp() {
-        dati.goal = parseInt(document.getElementById('input-goal').value);
-        dati.glass = parseInt(document.getElementById('input-glass').value);
-        
-        document.getElementById('setup-page').classList.remove('active');
-        document.getElementById('main-page').classList.add('active');
-        
-        document.getElementById('status-goal').innerText = dati.goal;
-        
-        aggiornaGrafica();
-        startTimer();
-    }
-
-    function tornaAlSetup() {
-        clearInterval(timerInterval);
+    function mostraSetup() {
         document.getElementById('main-page').classList.remove('active');
         document.getElementById('setup-page').classList.add('active');
     }
 
-    function startTimer() {
-        if(timerInterval) clearInterval(timerInterval);
+    function mostraMain() {
+        document.getElementById('setup-page').classList.remove('active');
+        document.getElementById('main-page').classList.add('active');
+        aggiornaLogica();
+    }
+
+    function salvaEAvvia() {
+        appData.goal = parseInt(document.getElementById('input-goal').value);
+        appData.wake = document.getElementById('input-wake').value;
+        appData.sleep = document.getElementById('input-sleep').value;
+        appData.lastDate = new Date().toDateString();
         
-        timerInterval = setInterval(() => {
-            if (!dati.isPaused && dati.secondsLeft > 0) {
-                dati.secondsLeft--;
-                updateTimerUI();
-                
-                if (dati.secondsLeft <= 0) {
-                    document.getElementById('alert-sound').play();
-                    alert("È ora di bere! La tua bottiglia ti aspetta.");
-                }
-            }
-        }, 1000);
+        salvaDati();
+        mostraMain();
+        richiediNotifiche();
+    }
+
+    function salvaDati() {
+        localStorage.setItem('idrolife_data', JSON.stringify(appData));
+    }
+
+    function aggiornaLogica() {
+        const ora = new Date();
+        const [wH, wM] = appData.wake.split(':').map(Number);
+        const [sH, sM] = appData.sleep.split(':').map(Number);
+        
+        const wakeDate = new Date(); wakeDate.setHours(wH, wM, 0);
+        const sleepDate = new Date(); sleepDate.setHours(sH, sM, 0);
+        
+        // Gestione notte (es. dormi alle 01:00)
+        if (sleepDate <= wakeDate) sleepDate.setDate(sleepDate.getDate() + 1);
+
+        const minutiTotali = (sleepDate - wakeDate) / 60000;
+        const minutiPassati = (ora - wakeDate) / 60000;
+
+        let obiettivoOra = 0;
+        if (ora >= wakeDate && ora <= sleepDate) {
+            obiettivoOra = Math.floor((appData.goal / minutiTotali) * minutiPassati);
+        } else if (ora > sleepDate) {
+            obiettivoOra = appData.goal;
+        }
+
+        render(obiettivoOra);
+    }
+
+    function render(obiettivoOra) {
+        document.getElementById('label-drunk').innerText = appData.drunk;
+        document.getElementById('label-goal').innerText = appData.goal;
+        
+        const percDrunk = (appData.drunk / appData.goal) * 100;
+        const percTarget = (obiettivoOra / appData.goal) * 100;
+
+        document.getElementById('fill').style.height = Math.min(percDrunk, 100) + "%";
+        document.getElementById('target-mark').style.bottom = Math.min(percTarget, 100) + "%";
+
+        const msg = document.getElementById('status-msg');
+        const ritardoUI = document.getElementById('info-ritardo');
+
+        if (appData.drunk >= appData.goal) {
+            msg.innerText = "🏆 OBIETTIVO RAGGIUNTO!";
+            msg.style.color = "var(--green)";
+            ritardoUI.innerText = "";
+        } else if (appData.drunk < obiettivoOra) {
+            msg.innerText = "⚠️ SEI IN RITARDO!";
+            msg.style.color = "var(--red)";
+            ritardoUI.innerText = "Ti mancano " + (obiettivoOra - appData.drunk) + "ml per essere in pari.";
+        } else {
+            msg.innerText = "✅ OTTIMO RITMO";
+            msg.style.color = "var(--blue)";
+            ritardoUI.innerText = "";
+        }
     }
 
     function bevi() {
-        dati.drunk += dati.glass;
-        if (dati.drunk > dati.goal) dati.drunk = dati.goal;
-        
-        // RESET DEL TIMER: Hai bevuto, quindi ti do un'altra ora
-        dati.secondsLeft = 3600; 
-        
-        aggiornaGrafica();
-        // Se l'audio era bloccato, questo click lo sblocca per il prossimo avviso
-        document.getElementById('alert-sound').pause(); 
+        appData.drunk += 250;
+        salvaDati();
+        aggiornaLogica();
     }
 
-    function aggiornaGrafica() {
-        document.getElementById('status-drunk').innerText = dati.drunk;
-        let percentuale = (dati.drunk / dati.goal) * 100;
-        document.getElementById('fill').style.height = percentuale + "%";
-        updateTimerUI();
-    }
-
-    function updateTimerUI() {
-        let min = Math.floor(dati.secondsLeft / 60);
-        let sec = dati.secondsLeft % 60;
-        document.getElementById('display-timer').innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-    }
-
-    function togglePausa() {
-        dati.isPaused = !dati.isPaused;
-        const b = document.getElementById('btn-pause');
-        if (dati.isPaused) {
-            b.innerText = "RIPRENDI (GIORNO)";
-            document.body.classList.add('night-mode');
-        } else {
-            b.innerText = "MODALITÀ NOTTE";
-            document.body.classList.remove('night-mode');
+    function richiediNotifiche() {
+        if ("Notification" in window) {
+            Notification.requestPermission();
         }
     }
-</script>
 
+    // Aggiorna la linea rossa ogni minuto senza ricaricare la pagina
+    setInterval(aggiornaLogica, 60000);
+</script>
 </body>
 </html>
