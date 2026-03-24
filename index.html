@@ -1,211 +1,215 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bevi, Dai! 💧 (versione sarcastica)</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: linear-gradient(to bottom, #e1f5fe, #81d4fa);
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 { color: #0277bd; margin: 10px 0; }
-    .glass {
-      position: relative;
-      width: 180px;
-      height: 320px;
-      background: white;
-      border: 10px solid #0288d1;
-      border-radius: 30px 30px 70px 70px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      margin: 20px 0;
-    }
-    .water {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      background: linear-gradient(to top, #42a5f5, #bbdefb);
-      transition: height 1.2s ease;
-    }
-    .wave {
-      position: absolute;
-      top: -20px;
-      width: 200%;
-      height: 40px;
-      background: rgba(255,255,255,0.35);
-      border-radius: 45%;
-      animation: wave 7s linear infinite;
-    }
-    @keyframes wave { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
-    .progress { font-size: 1.8rem; font-weight: bold; color: #01579b; margin: 10px 0; }
-    .reminder {
-      font-size: 1.4rem;
-      font-weight: 600;
-      text-align: center;
-      min-height: 80px;
-      padding: 0 20px;
-      color: #c62828;
-      opacity: 0;
-      transition: opacity 0.8s, transform 0.4s;
-    }
-    .reminder.show { opacity: 1; transform: scale(1.03); }
-    button {
-      background: #0288d1;
-      color: white;
-      border: none;
-      font-size: 1.2rem;
-      padding: 14px 32px;
-      border-radius: 50px;
-      margin: 8px;
-      box-shadow: 0 4px 12px rgba(2,136,209,0.3);
-      cursor: pointer;
-    }
-    button:active { transform: scale(0.96); }
-    .history {
-      width: 90%;
-      max-width: 360px;
-      background: white;
-      border-radius: 12px;
-      padding: 12px;
-      margin-top: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      max-height: 180px;
-      overflow-y: auto;
-      font-size: 0.95rem;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IdroLife - Il mio Assistente</title>
+    <style>
+        :root {
+            --blue: #00a8ff;
+            --green: #4cd137;
+            --red: #e84118;
+            --dark: #2f3640;
+            --light: #f5f6fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--light);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            transition: 0.5s;
+        }
+
+        .card {
+            background: white;
+            width: 90%;
+            max-width: 360px;
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        /* Navigazione Pagine */
+        .page { display: none; }
+        .active { display: block; }
+
+        /* Bottiglia */
+        .bottle-wrapper {
+            width: 110px;
+            height: 220px;
+            border: 5px solid var(--dark);
+            border-radius: 15px 15px 30px 30px;
+            margin: 20px auto;
+            position: relative;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .water-level {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(to top, #0077be, var(--blue));
+            transition: height 1s ease-in-out;
+        }
+
+        /* Testi */
+        .timer-text { font-size: 2.8rem; font-weight: bold; color: var(--red); margin: 10px 0; }
+        .info-text { font-size: 1.2rem; margin-bottom: 20px; }
+
+        /* Input e Bottoni */
+        input {
+            width: 80%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-start { background: var(--green); color: white; }
+        .btn-drink { background: var(--blue); color: white; }
+        .btn-pause { background: var(--dark); color: white; }
+        .btn-back { background: none; color: #7f8c8d; text-decoration: underline; font-size: 0.9rem; }
+
+        /* Dark Mode */
+        body.night-mode { background-color: #1a1a2e; }
+        body.night-mode .card { background-color: #16213e; color: white; }
+    </style>
 </head>
 <body>
 
-<h1>Bevi, Dai! 💧</h1>
+    <div id="setup-page" class="card page active">
+        <h1>Configurazione</h1>
+        <label>Obiettivo totale (ml):</label>
+        <input type="number" id="input-goal" value="2000">
+        <label>Capacità bicchiere (ml):</label>
+        <input type="number" id="input-glass" value="250">
+        <button class="btn-start" onclick="avviaApp()">INIZIA MONITORAGGIO</button>
+    </div>
 
-<div class="glass">
-  <div class="water" id="water"></div>
-  <div class="wave"></div>
-</div>
+    <div id="main-page" class="card page">
+        <button class="btn-back" onclick="tornaAlSetup()">⬅ Cambia Impostazioni</button>
+        
+        <div class="bottle-wrapper">
+            <div id="fill" class="water-level"></div>
+        </div>
 
-<div class="progress" id="progress">0 / 2000 ml</div>
+        <div class="info-text">
+            <b id="status-drunk">0</b> / <span id="status-goal">2000</span> ml
+        </div>
 
-<button id="btn250">+250 ml</button>
-<button id="btn500">+500 ml</button>
+        <div class="timer-text" id="display-timer">60:00</div>
+        
+        <button class="btn-drink" onclick="bevi()">BEVI UN BICCHIERE</button>
+        <button id="btn-pause" class="btn-pause" onclick="togglePausa()">MODALITÀ NOTTE</button>
+    </div>
 
-<div class="reminder" id="reminder"></div>
-
-<div class="history">
-  <strong>Storico oggi:</strong><br>
-  <div id="historyList"></div>
-</div>
-
-<button id="btnNotify" style="margin-top:20px; background:#555;">Attiva notifiche</button>
+    <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
 
 <script>
-const GOAL = 2000;
-const PAUSE_AFTER_DRINK = 60 * 60 * 1000;     // 60 min in ms
-const REMINDER_INTERVAL = 45 * 60 * 1000;     // 45 min in ms
+    let dati = {
+        goal: 2000,
+        glass: 250,
+        drunk: 0,
+        secondsLeft: 3600,
+        isPaused: false
+    };
 
-let today = new Date().toISOString().split('T')[0];
-let data = JSON.parse(localStorage.getItem('beviIronico') || '{}');
+    let timerInterval;
 
-if (!data[today]) {
-  data[today] = { total: 0, lastDrink: Date.now() - PAUSE_AFTER_DRINK - 1, history: [] };
-}
-
-let state = data[today];
-
-const water = document.getElementById('water');
-const progress = document.getElementById('progress');
-const reminder = document.getElementById('reminder');
-const histList = document.getElementById('historyList');
-
-const messages = [
-  "Oh, guarda… sono passati 60 minuti e ancora non mi calcoli. Mi sento usato e abusato 💧",
-  "Tranquillo, continua pure a ignorarmi. Tanto sto diventando un vaso da cimitero da solo…",
-  "Complimenti, hai quasi trasformato 'sto bicchiere in un cactus. Applausi? No? Un sorso magari?",
-  "Ok, record mondiale di disidratazione in corso. Vuoi il trofeo o preferisci l'acqua?",
-  "Seriamente… o bevi o chiamo tua madre. Non sto scherzando (forse)."
-];
-
-function save() {
-  data[today] = state;
-  localStorage.setItem('beviIronico', JSON.stringify(data));
-}
-
-function updateUI() {
-  const perc = Math.min(state.total / GOAL, 1);
-  water.style.height = (perc * 280) + 'px';
-  progress.textContent = Math.round(state.total) + ' / ' + GOAL + ' ml';
-
-  histList.innerHTML = state.history.slice(0,7).map(h =>
-    `${new Date(h.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} • +${h.ml} ml<br>`
-  ).join('');
-}
-
-function showReminder() {
-  const minSinceLast = (Date.now() - state.lastDrink) / 60000;
-  const ignoredCount = Math.floor((minSinceLast - 60) / 45);
-
-  if (ignoredCount >= 0) {
-    const idx = Math.min(ignoredCount, messages.length - 1);
-    reminder.textContent = messages[idx];
-    reminder.classList.add('show');
-
-    if (Notification.permission === 'granted') {
-      new Notification("Il tuo bicchiere sta facendo il drammatico", {
-        body: messages[idx],
-        icon: "https://img.icons8.com/fluency/96/000000/water.png"
-      });
+    // Funzione per avviare l'app
+    function avviaApp() {
+        dati.goal = parseInt(document.getElementById('input-goal').value);
+        dati.glass = parseInt(document.getElementById('input-glass').value);
+        
+        document.getElementById('setup-page').classList.remove('active');
+        document.getElementById('main-page').classList.add('active');
+        
+        document.getElementById('status-goal').innerText = dati.goal;
+        
+        aggiornaGrafica();
+        startTimer();
     }
-  } else {
-    reminder.classList.remove('show');
-  }
-}
 
-function drink(amount) {
-  state.total = Math.min(GOAL, state.total + amount);
-  state.lastDrink = Date.now();
-  state.history.unshift({ t: Date.now(), ml: amount });
-  if (state.history.length > 12) state.history.pop();
+    function tornaAlSetup() {
+        clearInterval(timerInterval);
+        document.getElementById('main-page').classList.remove('active');
+        document.getElementById('setup-page').classList.add('active');
+    }
 
-  reminder.classList.remove('show');
-  save();
-  updateUI();
-}
+    function startTimer() {
+        if(timerInterval) clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            if (!dati.isPaused && dati.secondsLeft > 0) {
+                dati.secondsLeft--;
+                updateTimerUI();
+                
+                if (dati.secondsLeft <= 0) {
+                    document.getElementById('alert-sound').play();
+                    alert("È ora di bere! La tua bottiglia ti aspetta.");
+                }
+            }
+        }, 1000);
+    }
 
-// Pulsanti
-document.getElementById('btn250').onclick = () => drink(250);
-document.getElementById('btn500').onclick = () => drink(500);
+    function bevi() {
+        dati.drunk += dati.glass;
+        if (dati.drunk > dati.goal) dati.drunk = dati.goal;
+        
+        // RESET DEL TIMER: Hai bevuto, quindi ti do un'altra ora
+        dati.secondsLeft = 3600; 
+        
+        aggiornaGrafica();
+        // Se l'audio era bloccato, questo click lo sblocca per il prossimo avviso
+        document.getElementById('alert-sound').pause(); 
+    }
 
-// Notifiche
-document.getElementById('btnNotify').onclick = async () => {
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission();
-  }
-  alert(Notification.permission === 'granted' ? "Notifiche attivate ✓" : "Permesso negato 😕");
-};
+    function aggiornaGrafica() {
+        document.getElementById('status-drunk').innerText = dati.drunk;
+        let percentuale = (dati.drunk / dati.goal) * 100;
+        document.getElementById('fill').style.height = percentuale + "%";
+        updateTimerUI();
+    }
 
-// Controlli periodici
-setInterval(() => {
-  // cambio giorno?
-  const nowDay = new Date().toISOString().split('T')[0];
-  if (nowDay !== today) {
-    today = nowDay;
-    if (!data[today]) data[today] = { total: 0, lastDrink: Date.now() - PAUSE_AFTER_DRINK - 1, history: [] };
-    state = data[today];
-  }
+    function updateTimerUI() {
+        let min = Math.floor(dati.secondsLeft / 60);
+        let sec = dati.secondsLeft % 60;
+        document.getElementById('display-timer').innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    }
 
-  showReminder();
-}, 30000); // controlla ogni 30 secondi
-
-// avvio
-updateUI();
-showReminder();
+    function togglePausa() {
+        dati.isPaused = !dati.isPaused;
+        const b = document.getElementById('btn-pause');
+        if (dati.isPaused) {
+            b.innerText = "RIPRENDI (GIORNO)";
+            document.body.classList.add('night-mode');
+        } else {
+            b.innerText = "MODALITÀ NOTTE";
+            document.body.classList.remove('night-mode');
+        }
+    }
 </script>
+
 </body>
 </html>
