@@ -10,7 +10,6 @@
         .card { background: white; width: 90%; max-width: 360px; padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; position: relative; }
         .page { display: none; } .active { display: block; }
         
-        /* Bottiglia */
         .bottle-wrapper { width: 100px; height: 200px; border: 4px solid var(--dark); border-radius: 10px 10px 25px 25px; margin: 20px auto; position: relative; background: #fff; overflow: hidden; }
         .water-level { position: absolute; bottom: 0; width: 100%; height: 0%; background: linear-gradient(to top, #0077be, var(--blue)); transition: height 0.5s ease-in-out; }
         .target-line { position: absolute; width: 100%; border-top: 2px dashed var(--red); z-index: 2; transition: bottom 0.5s; }
@@ -34,13 +33,13 @@
         <label>Ora Sonno:</label><br>
         <input type="time" id="input-sleep" value="23:00"><br>
         <button class="btn-setup" onclick="salvaEAvvia()">SALVA E INIZIA</button>
-        <p style="font-size: 0.7rem; color: #999;">Assicurati di aver attivato le notifiche nel browser.</p>
+        <p style="font-size: 0.7rem; color: #999;">Lascia l'app nel multitasking per ricevere le notifiche ironiche!</p>
     </div>
 
     <div id="main-page" class="card page">
         <button class="btn-back" onclick="mostraSetup()">⬅ Cambia Impostazioni</button>
         
-        <div id="status-msg" class="status-msg">Calcolo...</div>
+        <div id="status-msg" class="status-msg">Calcolo il tuo destino idrico...</div>
 
         <div class="bottle-wrapper">
             <div id="fill" class="water-level"></div>
@@ -61,16 +60,16 @@
         wake: "08:00",
         sleep: "23:00",
         drunk: 0,
-        lastDate: ""
+        lastDate: "",
+        nextReminder: 0   // timestamp della prossima notifica
     };
 
-    // Al caricamento, controlla se ci sono dati vecchi
+    let reminderInterval = null;
+
     window.onload = function() {
         const saved = localStorage.getItem('idrolife_data');
         if (saved) {
             appData = JSON.parse(saved);
-            
-            // RESET GIORNALIERO: Se è un giorno nuovo, azzera i ml bevuti
             const oggi = new Date().toDateString();
             if (appData.lastDate !== oggi) {
                 appData.drunk = 0;
@@ -79,24 +78,28 @@
             }
             mostraMain();
         }
+        richiediNotifiche();
     };
 
     function mostraSetup() {
         document.getElementById('main-page').classList.remove('active');
         document.getElementById('setup-page').classList.add('active');
+        clearInterval(reminderInterval);
     }
 
     function mostraMain() {
         document.getElementById('setup-page').classList.remove('active');
         document.getElementById('main-page').classList.add('active');
         aggiornaLogica();
+        avviaReminder();
     }
 
     function salvaEAvvia() {
-        appData.goal = parseInt(document.getElementById('input-goal').value);
+        appData.goal = parseInt(document.getElementById('input-goal').value) || 2000;
         appData.wake = document.getElementById('input-wake').value;
         appData.sleep = document.getElementById('input-sleep').value;
         appData.lastDate = new Date().toDateString();
+        appData.nextReminder = 0;
         
         salvaDati();
         mostraMain();
@@ -107,27 +110,81 @@
         localStorage.setItem('idrolife_data', JSON.stringify(appData));
     }
 
-    function aggiornaLogica() {
+    function richiediNotifiche() {
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    }
+
+    // ==================== LOGICA IRONICA ADATTIVA ====================
+    function calcolaObiettivoOra() {
         const ora = new Date();
         const [wH, wM] = appData.wake.split(':').map(Number);
         const [sH, sM] = appData.sleep.split(':').map(Number);
         
-        const wakeDate = new Date(); wakeDate.setHours(wH, wM, 0);
-        const sleepDate = new Date(); sleepDate.setHours(sH, sM, 0);
-        
-        // Gestione notte (es. dormi alle 01:00)
+        let wakeDate = new Date(); wakeDate.setHours(wH, wM, 0, 0);
+        let sleepDate = new Date(); sleepDate.setHours(sH, sM, 0, 0);
         if (sleepDate <= wakeDate) sleepDate.setDate(sleepDate.getDate() + 1);
 
         const minutiTotali = (sleepDate - wakeDate) / 60000;
-        const minutiPassati = (ora - wakeDate) / 60000;
+        const minutiPassati = Math.max(0, (ora - wakeDate) / 60000);
 
-        let obiettivoOra = 0;
-        if (ora >= wakeDate && ora <= sleepDate) {
-            obiettivoOra = Math.floor((appData.goal / minutiTotali) * minutiPassati);
-        } else if (ora > sleepDate) {
-            obiettivoOra = appData.goal;
+        if (ora < wakeDate) return 0;
+        if (ora > sleepDate) return appData.goal;
+
+        return Math.floor((appData.goal / minutiTotali) * minutiPassati);
+    }
+
+    function calcolaDeficit() {
+        return calcolaObiettivoOra() - appData.drunk;
+    }
+
+    function calcolaProssimoIntervallo(deficit) {
+        if (deficit <= 0) return 110 * 60 * 1000;        // sei un mostro
+        if (deficit <= 400) return 70 * 60 * 1000;       // dai, non sei messo male
+        return 40 * 60 * 1000;                           // muoviti lumaca!
+    }
+
+    function creaNotificaIronica() {
+        const deficit = calcolaDeficit();
+        let titolo = "💧 IdroLife ti chiama";
+        let corpo = "";
+
+        if (deficit <= 0) {
+            corpo = `Sei una bestia idrica! Hai già superato l'obiettivo del momento. Continua così, campione! 💪`;
+        } else if (deficit <= 400) {
+            corpo = `Ehi, non vorrai mica diventare una pianta appassita? Ti mancano solo ${deficit} ml per essere in pari. Un bicchierino? 😉`;
+        } else {
+            corpo = `Ok, ammettilo: stai battendo il record di disidratazione? 😂 Ti servono urgentemente ${deficit} ml. Muoviti!`;
         }
 
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(titolo, {
+                body: corpo,
+                icon: "https://cdn-icons-png.flaticon.com/512/3095/3095568.png", // icona acqua
+                tag: "idrolife-reminder"
+            });
+        }
+    }
+
+    function avviaReminder() {
+        clearInterval(reminderInterval);
+        
+        reminderInterval = setInterval(() => {
+            const adesso = Date.now();
+            if (adesso >= appData.nextReminder) {
+                creaNotificaIronica();
+                // programma la prossima
+                const deficit = calcolaDeficit();
+                const intervallo = calcolaProssimoIntervallo(deficit);
+                appData.nextReminder = adesso + intervallo;
+                salvaDati();
+            }
+        }, 30000); // controlla ogni 30 secondi
+    }
+
+    function aggiornaLogica() {
+        const obiettivoOra = calcolaObiettivoOra();
         render(obiettivoOra);
     }
 
@@ -144,16 +201,18 @@
         const msg = document.getElementById('status-msg');
         const ritardoUI = document.getElementById('info-ritardo');
 
+        const deficit = calcolaDeficit();
+
         if (appData.drunk >= appData.goal) {
-            msg.innerText = "🏆 OBIETTIVO RAGGIUNTO!";
+            msg.innerText = "🏆 OBIETTIVO RAGGIUNTO! Sei un dio dell'acqua!";
             msg.style.color = "var(--green)";
             ritardoUI.innerText = "";
-        } else if (appData.drunk < obiettivoOra) {
-            msg.innerText = "⚠️ SEI IN RITARDO!";
+        } else if (deficit > 0) {
+            msg.innerText = "⚠️ SEI IN RITARDO, pianta del deserto!";
             msg.style.color = "var(--red)";
-            ritardoUI.innerText = "Ti mancano " + (obiettivoOra - appData.drunk) + "ml per essere in pari.";
+            ritardoUI.innerText = `Ti mancano ${deficit} ml per non sembrare una spugna secca.`;
         } else {
-            msg.innerText = "✅ OTTIMO RITMO";
+            msg.innerText = "✅ Sei in perfetto ritmo, idratato come un cactus dopo la pioggia!";
             msg.style.color = "var(--blue)";
             ritardoUI.innerText = "";
         }
@@ -163,15 +222,15 @@
         appData.drunk += 250;
         salvaDati();
         aggiornaLogica();
+        
+        // dopo aver bevuto, riprogramma subito la prossima notifica
+        const deficit = calcolaDeficit();
+        const intervallo = calcolaProssimoIntervallo(deficit);
+        appData.nextReminder = Date.now() + intervallo;
+        salvaDati();
     }
 
-    function richiediNotifiche() {
-        if ("Notification" in window) {
-            Notification.requestPermission();
-        }
-    }
-
-    // Aggiorna la linea rossa ogni minuto senza ricaricare la pagina
+    // Aggiorna visualizzazione ogni minuto
     setInterval(aggiornaLogica, 60000);
 </script>
 </body>
